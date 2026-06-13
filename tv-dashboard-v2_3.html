@@ -196,8 +196,8 @@ const CONFIG = {
   // ---------- หน้า 1: การผลิตและคุณภาพ ----------
   page1: {
     csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=1365257584",
-    dataStartRow: 6,   // แถวข้อมูลวันแรก (สเปรดชีตแถว 7 -> index 6)
-    totalRow: 37,      // แถว "รวม" (สเปรดชีตแถว 38 -> index 37)
+    dataStartRow: 4,   // แถวข้อมูลวันแรก (หลังข้าม 2 แถวว่างก่อนหัวตาราง)
+    totalRow: 35,      // แถว "รวม" (หลังข้าม 2 แถวว่างก่อนหัวตาราง)
     col: {
       date: 0,            // วันที่
       platesProduced: 2,  // แผ่นที่ผลิตได้
@@ -220,7 +220,7 @@ const CONFIG = {
   // ---------- หน้า 2: Downtime ----------
   page2: {
     csvUrl: "https://docs.google.com/spreadsheets/d/1jIiZUxvz5ISfS50dP4NohlKTdm7oD0pm2wEv7J0sDmw/gviz/tq?tqx=out:csv&gid=1619007511",
-    dataRow: 4,         // แถวข้อมูล (สเปรดชีตแถว 5 -> index 4)
+    dataRow: 3,         // แถวข้อมูล (หลังข้าม 1 แถวว่างก่อนหัวตาราง)
     totalRuntimeCol: 0, // เวลาเดินเครื่องทั้งหมด (min)
     categories: [
       { name: "กระบวนการผลิต",     timeCol: 1,  pctCol: 2,  color: "#2dd4bf" },
