@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Production Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0a0e1a;
+    --surface:#121a2c;
+    --surface-2:#1a2336;
+    --border:#262f47;
+    --text:#f4f6fb;
+    --text-muted:#7e8aa3;
+    --teal:#2dd4bf;
+    --amber:#fbbf24;
+    --indigo:#818cf8;
+    --rose:#fb7185;
+    --green:#4ade80;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html,body{
+    width:100%; height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    overflow:hidden;
+  }
+
+  #app{
+    width:100vw; height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:2.2vh 2.5vw;
+    gap:1.8vh;
+  }
+
+  /* ===== HEADER ===== */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    padding-bottom:1.6vh;
+  }
+  .brand{ display:flex; flex-direction:column; gap:0.4vh; }
+  .brand .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:1.15vw;
+    letter-spacing:0.2em;
+    color:var(--teal);
+    display:flex; align-items:center; gap:0.7vw;
+  }
+  .pulse{
+    width:0.8vw; height:0.8vw; border-radius:50%;
+    background:var(--teal);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(45,212,191,0.55); }
+    70%{ box-shadow:0 0 0 1vw rgba(45,212,191,0); }
+    100%{ box-shadow:0 0 0 0 rgba(45,212,191,0); }
+  }
+  .brand h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:2.6vw; letter-spacing:-0.01em;
+  }
+  .brand h1 .subtitle{
+    font-family:'Inter', sans-serif; font-weight:500;
+    font-size:1.3vw; color:var(--text-muted); margin-left:1vw;
+  }
+  .clock-block{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.6vh; }
+  .clock{ font-family:'JetBrains Mono', monospace; font-size:2.6vw; font-weight:700; line-height:1; }
+  .date{ font-size:1.05vw; color:var(--text-muted); font-weight:500; }
+  .page-dots{ display:flex; gap:0.5vw; margin-top:0.4vh; }
+  .page-dots .dot{ width:2.2vw; height:0.35vh; background:var(--border); border-radius:2px; transition:background 0.3s; }
+  .page-dots .dot.active{ background:var(--teal); }
+
+  /* ===== MAIN ===== */
+  main{ flex:1; display:flex; flex-direction:column; gap:1.8vh; min-height:0; }
+  .page-title{
+    font-family:'Space Grotesk', sans-serif; font-size:1.7vw; font-weight:600;
+    display:flex; align-items:baseline; gap:1vw;
+  }
+  .page-title .tag{
+    font-family:'JetBrains Mono', monospace; font-size:1vw; color:var(--text-muted);
+    background:var(--surface-2); border:1px solid var(--border);
+    padding:0.3vh 0.8vw; border-radius:6px; letter-spacing:0.05em;
+  }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:1.8vh 1.6vw; display:flex; flex-direction:column;
+  }
+  .card-title{
+    font-size:1.05vw; color:var(--text-muted); font-weight:600;
+    text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1vh;
+  }
+
+  /* KPI cards */
+  .kpi-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:1.8vh 1.6vw; display:flex; flex-direction:column; gap:0.8vh;
+    border-top:3px solid var(--teal); justify-content:center;
+  }
+  .kpi-card.amber{ border-top-color:var(--amber); }
+  .kpi-card.indigo{ border-top-color:var(--indigo); }
+  .kpi-card.rose{ border-top-color:var(--rose); }
+  .kpi-card.green{ border-top-color:var(--green); }
+
+  .kpi-label{ font-size:1.05vw; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; }
+  .kpi-value{
+    font-family:'JetBrains Mono', monospace; font-weight:700; line-height:1.05;
+    display:flex; align-items:baseline; gap:0.5vw;
+  }
+  .kpi-value .unit{ font-size:1.1vw; color:var(--text-muted); font-weight:600; font-family:'Inter', sans-serif; }
+  .kpi-sub{ font-size:1vw; color:var(--text-muted); }
+
+  .chart-wrap{ flex:1; position:relative; min-height:0; }
+  .chart-wrap canvas{ width:100% !important; height:100% !important; }
+
+  /* ===== PAGE 1 LAYOUT ===== */
+  .p1-layout{ display:flex; gap:1.4vw; flex:1; min-height:0; }
+  .p1-left{ flex:1; display:flex; flex-direction:column; gap:1.4vh; min-height:0; }
+  .p1-left .kpi-card{ flex:1; }
+  .p1-left .kpi-card .kpi-value{ font-size:5vw; }
+  .p1-right{ flex:1.7; min-height:0; display:flex; flex-direction:column; gap:1.4vh; }
+  .p1-right .chart-card{ flex:1; min-height:0; }
+  .callout{
+    border-radius:12px; border:1px solid var(--border); border-left:4px solid var(--rose);
+    background:var(--surface-2); padding:1.4vh 1.4vw; font-size:1.25vw; line-height:1.5;
+  }
+  .callout b{ color:var(--rose); }
+  .callout .sub{ color:var(--text-muted); font-size:1.05vw; margin-top:0.4vh; }
+
+  /* ===== PAGE 2 LAYOUT ===== */
+  .p2-layout{ display:flex; gap:1.4vw; flex:1; min-height:0; }
+  .p2-left{ flex:1.2; min-height:0; }
+  .p2-right{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:1.4vh; min-height:0; }
+  .p2-right .kpi-card .kpi-value{ font-size:3.4vw; }
+
+  /* ===== FOOTER ===== */
+  footer{ display:flex; align-items:center; gap:1.4vw; }
+  .progress-track{ flex:1; height:0.6vh; background:var(--surface-2); border-radius:4px; overflow:hidden; }
+  .progress-fill{ height:100%; width:0%; background:linear-gradient(90deg, var(--teal), var(--indigo)); border-radius:4px; }
+  .progress-fill.animate{ animation:fill linear forwards; }
+  @keyframes fill{ from{ width:0%; } to{ width:100%; } }
+  .updated-label{ font-family:'JetBrains Mono', monospace; font-size:0.95vw; color:var(--text-muted); white-space:nowrap; }
+
+  .loading-msg{
+    color:var(--text-muted); font-size:1.2vw; font-family:'JetBrains Mono', monospace;
+    display:flex; align-items:center; justify-content:center; flex:1;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="eyebrow"><span class="pulse"></span> LIVE REPORT</div>
+      <h1 id="reportTitle">Report ประจำเดือน<span class="subtitle" id="reportSubtitle"></span></h1>
+    </div>
+    <div class="clock-block">
+      <div class="clock" id="clock">00:00:00</div>
+      <div class="date" id="dateLabel"></div>
+      <div class="page-dots" id="pageDots"></div>
+    </div>
+  </header>
+
+  <main id="main"><div class="loading-msg">กำลังโหลดข้อมูล...</div></main>
+
+  <footer>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="updated-label" id="updatedLabel">UPDATED --:--:--</div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================================
+   ⚙️ CONFIG — แก้ตำแหน่งแถว/คอลัมน์ตรงนี้ได้ ถ้าโครงสร้างชีตเปลี่ยน
+   หมายเหตุ: index ของแถว/คอลัมน์เริ่มที่ 0 (แถว/คอลัมน์แรกของชีต = 0)
+   ========================================================================= */
+
+const CONFIG = {
+  rotateSeconds: 10,
+  refreshDataSeconds: 60,
+
+  // ---------- หน้า 1: การผลิตและคุณภาพ ----------
+  page1: {
+    csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=1365257584",
+    dataStartRow: 6,   // แถวข้อมูลวันแรก (สเปรดชีตแถว 7 -> index 6)
+    totalRow: 37,      // แถว "รวม" (สเปรดชีตแถว 38 -> index 37)
+    col: {
+      date: 0,            // วันที่
+      platesProduced: 2,  // แผ่นที่ผลิตได้
+      yieldPct: 38       // %Yield (คอลัมน์ AM ในชีตจริง)
+    },
+    // เกณฑ์สีของ %Yield
+    yieldGood: 97,   // >= ค่านี้ = เขียว
+    yieldWarn: 92,   // >= ค่านี้ = เหลือง, ต่ำกว่า = แดง
+    // สาเหตุของเสีย เปรียบเทียบ กะ A / กะ B (อ้างอิงจากแถว "รวม")
+    defectCategories: [
+      { name: "Wet Reject",                colA: 6,  colB: 7 },
+      { name: "ขอบแหลม/ล้ม/ไม่สวย",          colA: 8,  colB: 9 },
+      { name: "ลอก",                       colA: 10, colB: 11 },
+      { name: "มุมแตก/ขอบแตก/ข้างแตก",       colA: 12, colB: 13 },
+      { name: "ไม่เต็ม",                    colA: 14, colB: 15 },
+      { name: "ร่อง พอง หน้า-หลังถอก",        colA: 16, colB: 17 }
+    ]
+  },
+
+  // ---------- หน้า 2: Downtime ----------
+  page2: {
+    csvUrl: "https://docs.google.com/spreadsheets/d/1jIiZUxvz5ISfS50dP4NohlKTdm7oD0pm2wEv7J0sDmw/gviz/tq?tqx=out:csv&gid=1619007511",
+    dataRow: 4,         // แถวข้อมูล (สเปรดชีตแถว 5 -> index 4)
+    totalRuntimeCol: 0, // เวลาเดินเครื่องทั้งหมด (min)
+    categories: [
+      { name: "กระบวนการผลิต",     timeCol: 1,  pctCol: 2,  color: "#2dd4bf" },
+      { name: "วิศวกรรมเครื่องกล", timeCol: 3,  pctCol: 4,  color: "#818cf8" },
+      { name: "วิศวกรรมไฟฟ้า",    timeCol: 5,  pctCol: 6,  color: "#fbbf24" },
+      { name: "วิธีการ",          timeCol: 7,  pctCol: 8,  color: "#fb7185" },
+      { name: "ทดลอง",            timeCol: 9,  pctCol: 10, color: "#4ade80" },
+      { name: "วัตถุดิบ",          timeCol: 11, pctCol: 12, color: "#60a5fa" },
+      { name: "ไฟฟ้าดับ",         timeCol: 13, pctCol: 14, color: "#f472b6" },
+      { name: "อื่นๆ",             timeCol: 15, pctCol: 16, color: "#a78bfa" },
+      { name: "ปรับปรุงเครื่องจักร", timeCol: 17, pctCol: 18, color: "#fb923c" }
+    ]
+  }
+};
+
+/* ========================================================================= */
+
+const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+
+let pageRows = [null, null];
+let currentPage = 0;
+let charts = {};
+
+function fmt(n, decimals=0){
+  if (n === null || n === undefined || isNaN(n)) return "-";
+  return Number(n).toLocaleString("th-TH", { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+}
+function toNumber(v){
+  if (v === null || v === undefined) return NaN;
+  const cleaned = String(v).replace(/[, ]/g,"").replace(/%/g,"");
+  return parseFloat(cleaned);
+}
+function destroyChart(id){ if (charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+/* ---------------- FETCH ---------------- */
+function fetchCsv(url){
+  // เพิ่ม cache-buster เพื่อให้ได้ข้อมูลล่าสุดเสมอ (ไม่ติด cache ของเบราว์เซอร์)
+  const bustUrl = url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
+  return fetch(bustUrl, { cache: "no-store" })
+    .then(res => {
+      if (!res.ok) throw new Error("HTTP " + res.status + " — ตรวจสอบว่าลิงก์ Publish to web ยังใช้งานได้");
+      return res.text();
+    })
+    .then(text => {
+      const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+      return { rows: parsed.data, error: null };
+    })
+    .catch(err => ({ rows: [], error: "โหลดข้อมูลไม่สำเร็จ: " + err.message }));
+}
+
+function fetchAllData(){
+  return Promise.all([
+    fetchCsv(CONFIG.page1.csvUrl),
+    fetchCsv(CONFIG.page2.csvUrl)
+  ]).then(([p1, p2])=>{
+    pageRows[0] = p1;
+    pageRows[1] = p2;
+    updateReportTitle();
+    document.getElementById("updatedLabel").textContent = "UPDATED " + new Date().toLocaleTimeString("th-TH");
+    renderPage(currentPage);
+  });
+}
+
+/* ---------------- TITLE FROM PAGE 1 DATE ---------------- */
+function updateReportTitle(){
+  const p1 = pageRows[0];
+  if (!p1 || p1.error || !p1.rows[CONFIG.page1.dataStartRow]) return;
+  const dateStr = p1.rows[CONFIG.page1.dataStartRow][CONFIG.page1.col.date];
+  if (!dateStr) return;
+  const parts = String(dateStr).split("/");
+  if (parts.length < 3) return;
+  const month = parseInt(parts[1], 10);
+  const year = parts[2];
+  const monthName = THAI_MONTHS[month-1] || "";
+  document.getElementById("reportSubtitle").textContent = `${monthName} ${year}`;
+}
+
+/* ---------------- PAGE 1 RENDER ---------------- */
+function renderPage1(){
+  const main = document.getElementById("main");
+  const data = pageRows[0];
+  if (!data || data.error){
+    main.innerHTML = `<div class="loading-msg">${data ? data.error : "กำลังโหลดข้อมูล..."}</div>`;
+    return;
+  }
+  const cfg = CONFIG.page1;
+  const totalRow = data.rows[cfg.totalRow];
+  if (!totalRow){
+    main.innerHTML = `<div class="loading-msg">ไม่พบแถว "รวม" (แถว index ${cfg.totalRow}) — ตรวจสอบ config</div>`;
+    return;
+  }
+
+  const yieldVal = toNumber(totalRow[cfg.col.yieldPct]);
+  const platesVal = toNumber(totalRow[cfg.col.platesProduced]);
+  let yieldColor = "rose";
+  if (yieldVal >= cfg.yieldGood) yieldColor = "green";
+  else if (yieldVal >= cfg.yieldWarn) yieldColor = "amber";
+
+  // build defect comparison, sorted by total desc
+  const defects = cfg.defectCategories.map(d => {
+    const a = toNumber(totalRow[d.colA]) || 0;
+    const b = toNumber(totalRow[d.colB]) || 0;
+    return { name: d.name, a, b, total: a+b };
+  }).sort((x,y)=> y.total - x.total);
+
+  const top = defects[0];
+
+  main.innerHTML = `
+    <div class="page-title">การผลิตและคุณภาพ <span class="tag">PAGE 01 · QUALITY</span></div>
+    <div class="p1-layout">
+      <div class="p1-left">
+        <div class="kpi-card ${yieldColor}">
+          <div class="kpi-label">%Yield รวมเดือนนี้</div>
+          <div class="kpi-value">${fmt(yieldVal,2)}<span class="unit">%</span></div>
+          <div class="kpi-sub">เกณฑ์: เขียว ≥ ${cfg.yieldGood}% · เหลือง ≥ ${cfg.yieldWarn}% · แดง &lt; ${cfg.yieldWarn}%</div>
+        </div>
+        <div class="kpi-card indigo">
+          <div class="kpi-label">แผ่นที่ผลิตได้รวม</div>
+          <div class="kpi-value">${fmt(platesVal,0)}<span class="unit">แผ่น</span></div>
+        </div>
+      </div>
+      <div class="p1-right">
+        <div class="card chart-card">
+          <div class="card-title">ของเสียสะสมทั้งเดือน — เปรียบเทียบกะ A vs กะ B (เรียงจากมากไปน้อย)</div>
+          <div class="chart-wrap"><canvas id="chartDefects"></canvas></div>
+        </div>
+        <div class="callout">
+          <b>สาเหตุหลักของเสีย: ${top.name}</b> — รวม ${fmt(top.total)} แผ่น
+          <div class="sub">กะ A: ${fmt(top.a)} แผ่น &nbsp;|&nbsp; กะ B: ${fmt(top.b)} แผ่น &nbsp;|&nbsp; ทีมที่เกี่ยวข้องโปรดตรวจสอบสาเหตุและปรับปรุง</div>
+        </div>
+      </div>
+    </div>`;
+
+  charts["chartDefects"] = new Chart(document.getElementById("chartDefects"), {
+    type: "bar",
+    data: {
+      labels: defects.map(d=>d.name),
+      datasets: [
+        { label: "กะ A", data: defects.map(d=>d.a), backgroundColor: "#2dd4bf", borderRadius: 4 },
+        { label: "กะ B", data: defects.map(d=>d.b), backgroundColor: "#818cf8", borderRadius: 4 }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { labels: { color: "#f4f6fb", font: { family: "Inter", size: 13 } } }
+      },
+      scales: {
+        x: { ticks: { color: "#7e8aa3", font:{ family:"JetBrains Mono", size:12 } }, grid: { color: "#1a2336" } },
+        y: { ticks: { color: "#f4f6fb", font:{ family:"Inter", size:13 } }, grid: { display:false } }
+      }
+    }
+  });
+}
+
+/* ---------------- PAGE 2 RENDER ---------------- */
+function renderPage2(){
+  const main = document.getElementById("main");
+  const data = pageRows[1];
+  if (!data || data.error){
+    main.innerHTML = `<div class="loading-msg">${data ? data.error : "กำลังโหลดข้อมูล..."}</div>`;
+    return;
+  }
+  const cfg = CONFIG.page2;
+  const row = data.rows[cfg.dataRow];
+  if (!row){
+    main.innerHTML = `<div class="loading-msg">ไม่พบแถวข้อมูล (แถว index ${cfg.dataRow}) — ตรวจสอบ config</div>`;
+    return;
+  }
+
+  const totalRuntime = toNumber(row[cfg.totalRuntimeCol]) || 0;
+  const cats = cfg.categories.map(c => ({
+    name: c.name,
+    time: toNumber(row[c.timeCol]) || 0,
+    pct: toNumber(row[c.pctCol]) || 0,
+    color: c.color
+  }));
+  const totalDowntime = cats.reduce((s,c)=>s+c.time, 0);
+  const downtimePct = totalRuntime > 0 ? (totalDowntime/totalRuntime*100) : 0;
+  const top = cats.reduce((max,c)=> c.time > max.time ? c : max, cats[0]);
+
+  const chartCats = cats.filter(c => c.time > 0);
+
+  main.innerHTML = `
+    <div class="page-title">Downtime การหยุดเครื่อง <span class="tag">PAGE 02 · DOWNTIME</span></div>
+    <div class="p2-layout">
+      <div class="card p2-left">
+        <div class="card-title">สัดส่วน Downtime ตามสาเหตุ (นาที)</div>
+        <div class="chart-wrap"><canvas id="chartDowntime"></canvas></div>
+      </div>
+      <div class="p2-right">
+        <div class="kpi-card teal">
+          <div class="kpi-label">เวลาเดินเครื่องทั้งหมด</div>
+          <div class="kpi-value">${fmt(totalRuntime)}<span class="unit">นาที</span></div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">รวม Downtime</div>
+          <div class="kpi-value">${fmt(totalDowntime)}<span class="unit">นาที</span></div>
+        </div>
+        <div class="kpi-card rose">
+          <div class="kpi-label">% Downtime รวม</div>
+          <div class="kpi-value">${fmt(downtimePct,2)}<span class="unit">%</span></div>
+        </div>
+        <div class="kpi-card indigo">
+          <div class="kpi-label">สาเหตุหลักที่หยุดมากที่สุด</div>
+          <div class="kpi-value" style="font-size:1.9vw;">${top.name}</div>
+          <div class="kpi-sub">${fmt(top.time)} นาที (${fmt(top.pct,2)}%)</div>
+        </div>
+      </div>
+    </div>`;
+
+  charts["chartDowntime"] = new Chart(document.getElementById("chartDowntime"), {
+    type: "doughnut",
+    data: {
+      labels: chartCats.map(c=>c.name),
+      datasets: [{ data: chartCats.map(c=>c.time), backgroundColor: chartCats.map(c=>c.color), borderWidth: 0 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "right", labels: { color:"#f4f6fb", font:{ family:"Inter", size:13 }, boxWidth:14 } }
+      }
+    }
+  });
+}
+
+/* ---------------- ROUTER ---------------- */
+function renderPage(index){
+  document.getElementById("pageDots").querySelectorAll(".dot").forEach((d,i)=>{
+    d.classList.toggle("active", i === index);
+  });
+  Object.keys(charts).forEach(destroyChart);
+  if (index === 0) renderPage1();
+  else renderPage2();
+}
+
+/* ---------------- ROTATION ---------------- */
+function startRotation(){
+  const fill = document.getElementById("progressFill");
+  function cycle(){
+    fill.classList.remove("animate");
+    fill.style.width = "0%";
+    void fill.offsetWidth;
+    fill.style.animationDuration = CONFIG.rotateSeconds + "s";
+    fill.classList.add("animate");
+    renderPage(currentPage);
+    setTimeout(()=>{
+      currentPage = (currentPage + 1) % 2;
+      cycle();
+    }, CONFIG.rotateSeconds * 1000);
+  }
+  cycle();
+}
+
+/* ---------------- CLOCK ---------------- */
+function startClock(){
+  function tick(){
+    const now = new Date();
+    document.getElementById("clock").textContent = now.toLocaleTimeString("th-TH");
+    document.getElementById("dateLabel").textContent = now.toLocaleDateString("th-TH", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ---------------- INIT ---------------- */
+function init(){
+  const dots = document.getElementById("pageDots");
+  for(let i=0;i<2;i++){
+    const d = document.createElement("div");
+    d.className = "dot";
+    dots.appendChild(d);
+  }
+  startClock();
+  fetchAllData().then(startRotation);
+  setInterval(fetchAllData, CONFIG.refreshDataSeconds * 1000);
+}
+
+init();
+</script>
+</body>
+</html>
