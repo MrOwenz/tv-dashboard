@@ -263,7 +263,8 @@ const leaderLinePlugin = {
     meta.data.forEach((arc, i) => {
       const value = dataset.data[i];
       if (!value) return;
-      const pct = (value/total*100).toFixed(1);
+      const pctSource = dataset.percentages ? dataset.percentages[i] : (value/total*100);
+      const pct = pctSource.toFixed(2);
       const label = chart.data.labels[i];
       const { x: cx, y: cy, outerRadius, startAngle, endAngle } =
         arc.getProps(["x","y","outerRadius","startAngle","endAngle"], true);
@@ -520,7 +521,7 @@ function renderPage2(){
     type: "doughnut",
     data: {
       labels: chartCats.map(c=>c.name),
-      datasets: [{ data: chartCats.map(c=>c.time), backgroundColor: chartCats.map(c=>c.color), borderWidth: 0 }]
+      datasets: [{ data: chartCats.map(c=>c.time), backgroundColor: chartCats.map(c=>c.color), percentages: chartCats.map(c=>c.pct), borderWidth: 0 }]
     },
     options: {
       responsive: true,
