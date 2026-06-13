@@ -330,6 +330,10 @@ function renderPage1(){
 
   main.innerHTML = `
     <div class="page-title">การผลิตและคุณภาพ <span class="tag">PAGE 01 · QUALITY</span></div>
+    <div class="card" style="font-family:'JetBrains Mono',monospace; font-size:0.9vw; color:#7e8aa3; max-height:30vh; overflow:auto; flex:0 0 auto;">
+      <div class="card-title">DEBUG: totalRow (index: value)</div>
+      <div>${totalRow.map((v,i)=>`[${i}]="${v}"`).join("  ")}</div>
+    </div>
     <div class="p1-layout">
       <div class="p1-left">
         <div class="kpi-card ${yieldColor}">
@@ -438,7 +442,7 @@ function renderPage2(){
   charts["chartDowntime"] = new Chart(document.getElementById("chartDowntime"), {
     type: "doughnut",
     data: {
-      labels: chartCats.map(c=>c.name),
+      labels: chartCats.map(c=>`${c.name} (${fmt(c.pct,2)}%)`),
       datasets: [{ data: chartCats.map(c=>c.time), backgroundColor: chartCats.map(c=>c.color), borderWidth: 0 }]
     },
     options: {
