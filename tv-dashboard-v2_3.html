@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 
 <style>
   :root{
@@ -245,6 +246,67 @@ let pageRows = [null, null];
 let currentPage = 0;
 let charts = {};
 
+Chart.register(ChartDataLabels);
+Chart.defaults.set("plugins.datalabels", { display: false });
+
+/* Custom plugin: draws leader lines + labels pointing to each donut slice */
+const leaderLinePlugin = {
+  id: "leaderLines",
+  afterDraw(chart) {
+    if (chart.config.type !== "doughnut") return;
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    const dataset = chart.data.datasets[0];
+    const total = dataset.data.reduce((a,b)=>a+(b||0), 0);
+    if (!total) return;
+
+    meta.data.forEach((arc, i) => {
+      const value = dataset.data[i];
+      if (!value) return;
+      const pct = (value/total*100).toFixed(1);
+      const label = chart.data.labels[i];
+      const { x: cx, y: cy, outerRadius, startAngle, endAngle } =
+        arc.getProps(["x","y","outerRadius","startAngle","endAngle"], true);
+      const angle = (startAngle + endAngle) / 2;
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      const x1 = cx + cos * outerRadius;
+      const y1 = cy + sin * outerRadius;
+      const bend = outerRadius + 22;
+      const x2 = cx + cos * bend;
+      const y2 = cy + sin * bend;
+      const dir = cos >= 0 ? 1 : -1;
+      const x3 = x2 + dir * 26;
+      const y3 = y2;
+
+      ctx.save();
+      ctx.strokeStyle = dataset.backgroundColor[i];
+      ctx.fillStyle = dataset.backgroundColor[i];
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(x3, y3);
+      ctx.stroke();
+      // dot at the slice edge
+      ctx.beginPath();
+      ctx.arc(x1, y1, 3, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#f4f6fb";
+      ctx.font = "600 14px Inter, sans-serif";
+      ctx.textAlign = dir > 0 ? "left" : "right";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(`${label}`, x3 + dir*4, y3 - 6);
+
+      ctx.fillStyle = "#7e8aa3";
+      ctx.font = "600 13px 'JetBrains Mono', monospace";
+      ctx.fillText(`${pct}%`, x3 + dir*4, y3 + 12);
+      ctx.restore();
+    });
+  }
+};
+Chart.register(leaderLinePlugin);
+
 function fmt(n, decimals=0){
   if (n === null || n === undefined || isNaN(n)) return "-";
   return Number(n).toLocaleString("th-TH", { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
@@ -373,8 +435,17 @@ function renderPage1(){
       animation: { duration: 400 },
       plugins: {
         legend: { labels: { color: "#f4f6fb", font: { family: "Inter", size: 13 } } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)}%` } }
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)}%` } },
+        datalabels: {
+          display: true,
+          anchor: "end",
+          align: "end",
+          color: "#f4f6fb",
+          font: { family: "JetBrains Mono", size: 12, weight: "600" },
+          formatter: (value) => value.toFixed(2) + "%"
+        }
       },
+      layout: { padding: { right: 40 } },
       scales: {
         x: {
           ticks: {
@@ -448,14 +519,16 @@ function renderPage2(){
   charts["chartDowntime"] = new Chart(document.getElementById("chartDowntime"), {
     type: "doughnut",
     data: {
-      labels: chartCats.map(c=>`${c.name} (${fmt(c.pct,2)}%)`),
+      labels: chartCats.map(c=>c.name),
       datasets: [{ data: chartCats.map(c=>c.time), backgroundColor: chartCats.map(c=>c.color), borderWidth: 0 }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: "55%",
+      layout: { padding: 90 },
       plugins: {
-        legend: { position: "right", labels: { color:"#f4f6fb", font:{ family:"Inter", size:13 }, boxWidth:14 } }
+        legend: { display: false }
       }
     }
   });
