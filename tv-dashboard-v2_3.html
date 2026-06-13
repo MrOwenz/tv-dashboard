@@ -197,11 +197,12 @@ const CONFIG = {
   page1: {
     csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=1365257584",
     dataStartRow: 4,   // แถวข้อมูลวันแรก (หลังข้าม 2 แถวว่างก่อนหัวตาราง)
-    totalRow: 35,      // แถว "รวม" (หลังข้าม 2 แถวว่างก่อนหัวตาราง)
+    totalRow: 34,      // แถว "รวม" (ค่าจำนวนจริง)
+    percentRow: 35,    // แถว "% ของเสีย" (ถัดจากแถวรวม ใช้สำหรับกราฟเปอร์เซ็นต์)
     col: {
       date: 0,            // วันที่
       platesProduced: 2,  // แผ่นที่ผลิตได้
-      yieldPct: 18       // %Yield (gviz ไม่ส่งคอลัมน์ที่ซ่อนไว้มา ทำให้ตำแหน่งขยับจาก AM(38) มาเป็น 18)
+      yieldPct: 38        // %Yield (คอลัมน์ AM)
     },
     // เกณฑ์สีของ %Yield
     yieldGood: 97,   // >= ค่านี้ = เขียว
@@ -313,16 +314,18 @@ function renderPage1(){
     return;
   }
 
+  const percentRow = data.rows[cfg.percentRow];
+
   const yieldVal = toNumber(totalRow[cfg.col.yieldPct]);
   const platesVal = toNumber(totalRow[cfg.col.platesProduced]);
   let yieldColor = "rose";
   if (yieldVal >= cfg.yieldGood) yieldColor = "green";
   else if (yieldVal >= cfg.yieldWarn) yieldColor = "amber";
 
-  // build defect comparison, sorted by total desc
+  // build defect comparison (เป็น % ของแผ่นผลิตรวม), sorted by total desc
   const defects = cfg.defectCategories.map(d => {
-    const a = toNumber(totalRow[d.colA]) || 0;
-    const b = toNumber(totalRow[d.colB]) || 0;
+    const a = toNumber(percentRow[d.colA]) || 0;
+    const b = toNumber(percentRow[d.colB]) || 0;
     return { name: d.name, a, b, total: a+b };
   }).sort((x,y)=> y.total - x.total);
 
@@ -330,10 +333,6 @@ function renderPage1(){
 
   main.innerHTML = `
     <div class="page-title">การผลิตและคุณภาพ <span class="tag">PAGE 01 · QUALITY</span></div>
-    <div class="card" style="font-family:'JetBrains Mono',monospace; font-size:0.9vw; color:#7e8aa3; max-height:30vh; overflow:auto; flex:0 0 auto;">
-      <div class="card-title">DEBUG: totalRow (index: value)</div>
-      <div>${totalRow.map((v,i)=>`[${i}]="${v}"`).join("  ")}</div>
-    </div>
     <div class="p1-layout">
       <div class="p1-left">
         <div class="kpi-card ${yieldColor}">
@@ -348,12 +347,12 @@ function renderPage1(){
       </div>
       <div class="p1-right">
         <div class="card chart-card">
-          <div class="card-title">ของเสียสะสมทั้งเดือน — เปรียบเทียบกะ A vs กะ B (เรียงจากมากไปน้อย)</div>
+          <div class="card-title">% ของเสียต่อแผ่นผลิตรวม — เปรียบเทียบกะ A vs กะ B (เรียงจากมากไปน้อย)</div>
           <div class="chart-wrap"><canvas id="chartDefects"></canvas></div>
         </div>
         <div class="callout">
-          <b>สาเหตุหลักของเสีย: ${top.name}</b> — รวม ${fmt(top.total)} แผ่น
-          <div class="sub">กะ A: ${fmt(top.a)} แผ่น &nbsp;|&nbsp; กะ B: ${fmt(top.b)} แผ่น &nbsp;|&nbsp; ทีมที่เกี่ยวข้องโปรดตรวจสอบสาเหตุและปรับปรุง</div>
+          <b>สาเหตุหลักของเสีย: ${top.name}</b> — รวม ${fmt(top.total,2)}%
+          <div class="sub">กะ A: ${fmt(top.a,2)}% &nbsp;|&nbsp; กะ B: ${fmt(top.b,2)}% &nbsp;|&nbsp; ทีมที่เกี่ยวข้องโปรดตรวจสอบสาเหตุและปรับปรุง</div>
         </div>
       </div>
     </div>`;
@@ -373,10 +372,17 @@ function renderPage1(){
       maintainAspectRatio: false,
       animation: { duration: 400 },
       plugins: {
-        legend: { labels: { color: "#f4f6fb", font: { family: "Inter", size: 13 } } }
+        legend: { labels: { color: "#f4f6fb", font: { family: "Inter", size: 13 } } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)}%` } }
       },
       scales: {
-        x: { ticks: { color: "#7e8aa3", font:{ family:"JetBrains Mono", size:12 } }, grid: { color: "#1a2336" } },
+        x: {
+          ticks: {
+            color: "#7e8aa3", font:{ family:"JetBrains Mono", size:12 },
+            callback: (v) => v + "%"
+          },
+          grid: { color: "#1a2336" }
+        },
         y: { ticks: { color: "#f4f6fb", font:{ family:"Inter", size:13 } }, grid: { display:false } }
       }
     }
