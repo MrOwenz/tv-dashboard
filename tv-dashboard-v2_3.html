@@ -246,7 +246,7 @@ const CONFIG = {
   // ---------- หน้า 3: % สาเหตุของเสีย 5 อันดับหลัก (รายเดือน) ----------
   page3: {
     csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=520260093",
-    dataStartRow: 2,  // แถวเดือน 1 (index)
+    dataStartRow: 1,  // แถวเดือน 1 (index)
     maxMonths: 12,    // สแกนสูงสุด 12 เดือน
     monthCol: 0,      // คอลัมน์ เดือน
     checkCol: 1,      // คอลัมน์ใช้เช็คว่าเดือนนี้มีข้อมูลหรือยัง (แผ่นที่เข้าคัด > 0)
@@ -572,11 +572,9 @@ function renderPage3(){
 
   // หาเดือนที่มีข้อมูลแล้ว (checkCol > 0 และคอลัมน์เดือนต้องเป็นเลข 1-12 ที่ถูกต้อง)
   const months = [];
-  const debugRows = [];
   for (let i=0; i<cfg.maxMonths; i++){
     const row = data.rows[cfg.dataStartRow + i];
     if (!row) break;
-    debugRows.push(`row[${cfg.dataStartRow+i}]: monthCol="${row[cfg.monthCol]}" checkCol="${row[cfg.checkCol]}"`);
     const monthNum = toNumber(row[cfg.monthCol]);
     if (!monthNum || monthNum < 1 || monthNum > 12) continue; // ข้ามแถว "รวม" หรือแถวอื่นที่ไม่ใช่เดือน
     const check = toNumber(row[cfg.checkCol]);
@@ -591,10 +589,6 @@ function renderPage3(){
 
   main.innerHTML = `
     <div class="page-title">% สาเหตุของเสีย 5 อันดับหลัก (รายเดือน) <span class="tag">PAGE 03 · DEFECT TRENDS</span></div>
-    <div class="card" style="font-family:'JetBrains Mono',monospace; font-size:0.85vw; color:#7e8aa3; max-height:20vh; overflow:auto; flex:0 0 auto;">
-      <div class="card-title">DEBUG: rows scanned</div>
-      <div>${debugRows.join("<br>")}</div>
-    </div>
     <div class="p3-row">
       ${cfg.causes.map((c,i)=>`
         <div class="card p3-card">
