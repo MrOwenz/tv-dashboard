@@ -257,14 +257,29 @@ const CONFIG = {
       { name: "ขอบแตก/ข้างแตก",         col: 5, color: "#f59e0b" },
       { name: "พอง หน้า-หลังถอก",       col: 7, color: "#84cc16" }
     ]
+  },
+
+  // ---------- หน้า 4: % ของเสีย 4 สาเหตุหลัก เปรียบเทียบกะ A/B (รายเดือน) ----------
+  page4: {
+    csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=719178059",
+    dataStartRow: 36,  // แถวเดือน 1 (index) — สเปรดชีตแถว 37
+    maxMonths: 12,
+    yAxisMax: 2,       // สเกลแกน Y สูงสุด (%)
+    causes: [
+      { name: "% ขอบล้ม/ขอบแหลม รายเดือน แยกกะ", monthCol: 20, colA: 21, colB: 22 },
+      { name: "% ลอก รายเดือน แยกกะ",            monthCol: 24, colA: 25, colB: 26 },
+      { name: "% ขอบแตก รายเดือน แยกกะ",         monthCol: 28, colA: 29, colB: 30 },
+      { name: "% ร่อง/ริ้ว รายเดือน แยกกะ",       monthCol: 32, colA: 33, colB: 34 }
+    ]
   }
 };
+
 
 /* ========================================================================= */
 
 const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-let pageRows = [null, null, null];
+let pageRows = [null, null, null, null];
 let currentPage = 0;
 let charts = {};
 
@@ -361,11 +376,13 @@ function fetchAllData(){
   return Promise.all([
     fetchCsv(CONFIG.page1.csvUrl),
     fetchCsv(CONFIG.page2.csvUrl),
-    fetchCsv(CONFIG.page3.csvUrl)
-  ]).then(([p1, p2, p3])=>{
+    fetchCsv(CONFIG.page3.csvUrl),
+    fetchCsv(CONFIG.page4.csvUrl)
+  ]).then(([p1, p2, p3, p4])=>{
     pageRows[0] = p1;
     pageRows[1] = p2;
     pageRows[2] = p3;
+    pageRows[3] = p4;
     updateReportTitle();
     document.getElementById("updatedLabel").textContent = "UPDATED " + new Date().toLocaleTimeString("th-TH");
     renderPage(currentPage);
@@ -636,6 +653,89 @@ function renderPage3(){
   });
 }
 
+/* ---------------- PAGE 4 RENDER ---------------- */
+function renderPage4(){
+  const main = document.getElementById("main");
+  const data = pageRows[3];
+  if (!data || data.error){
+    main.innerHTML = `<div class="loading-msg">${data ? data.error : "กำลังโหลดข้อมูล..."}</div>`;
+    return;
+  }
+  const cfg = CONFIG.page4;
+
+  // สำหรับแต่ละสาเหตุ หาเดือนที่มีข้อมูลแล้ว (เดือนต้องเป็นเลข 1-12 และมีค่า A หรือ B อย่างน้อยหนึ่งค่า)
+  const causesData = cfg.causes.map(cause => {
+    const months = [];
+    for (let i=0; i<cfg.maxMonths; i++){
+      const row = data.rows[cfg.dataStartRow + i];
+      if (!row) break;
+      const monthNum = toNumber(row[cause.monthCol]);
+      if (!monthNum || monthNum < 1 || monthNum > 12) continue;
+      const a = toNumber(row[cause.colA]);
+      const b = toNumber(row[cause.colB]);
+      if ((!a || a <= 0) && (!b || b <= 0)) continue;
+      months.push({ monthNum, a: a||0, b: b||0 });
+    }
+    return { ...cause, months };
+  });
+
+  if (causesData.every(c => c.months.length === 0)){
+    main.innerHTML = `<div class="loading-msg">ไม่พบข้อมูลเดือนที่มีค่า — ตรวจสอบ config</div>`;
+    return;
+  }
+
+  main.innerHTML = `
+    <div class="page-title">เปรียบเทียบ % ของเสีย 4 สาเหตุหลัก แยกกะ (รายเดือน) <span class="tag">PAGE 04 · A VS B</span></div>
+    <div class="p3-row">
+      ${causesData.map((c,i)=>`
+        <div class="card p3-card">
+          <div class="card-title">${c.name}</div>
+          <div class="chart-wrap"><canvas id="chart4_${i}"></canvas></div>
+        </div>`).join("")}
+    </div>`;
+
+  causesData.forEach((cause, i) => {
+    charts[`chart4_${i}`] = new Chart(document.getElementById(`chart4_${i}`), {
+      type: "bar",
+      data: {
+        labels: cause.months.map(m=>m.monthNum),
+        datasets: [
+          { label: "A", data: cause.months.map(m=>m.a), backgroundColor: "#2dd4bf", borderRadius: 4 },
+          { label: "B", data: cause.months.map(m=>m.b), backgroundColor: "#818cf8", borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+          legend: { labels: { color: "#f4f6fb", font: { family: "Inter", size: 11 } } },
+          datalabels: {
+            display: true,
+            anchor: "end",
+            align: "end",
+            color: "#f4f6fb",
+            font: { family: "JetBrains Mono", size: 9, weight: "600" },
+            formatter: (v) => v.toFixed(2) + "%"
+          }
+        },
+        layout: { padding: { top: 18 } },
+        scales: {
+          x: { ticks: { color: "#7e8aa3", font:{ family:"Inter", size:11 } }, grid: { display:false } },
+          y: {
+            min: 0, max: cfg.yAxisMax,
+            ticks: {
+              color: "#7e8aa3", font:{ family:"JetBrains Mono", size:10 },
+              stepSize: 0.5, callback: (v) => v + "%"
+            },
+            grid: { color: "#1a2336" }
+          }
+        }
+      }
+    });
+  });
+}
+
 /* ---------------- ROUTER ---------------- */
 function renderPage(index){
   document.getElementById("pageDots").querySelectorAll(".dot").forEach((d,i)=>{
@@ -644,7 +744,8 @@ function renderPage(index){
   Object.keys(charts).forEach(destroyChart);
   if (index === 0) renderPage1();
   else if (index === 1) renderPage2();
-  else renderPage3();
+  else if (index === 2) renderPage3();
+  else renderPage4();
 }
 
 /* ---------------- ROTATION ---------------- */
@@ -658,7 +759,7 @@ function startRotation(){
     fill.classList.add("animate");
     renderPage(currentPage);
     setTimeout(()=>{
-      currentPage = (currentPage + 1) % 3;
+      currentPage = (currentPage + 1) % 4;
       cycle();
     }, CONFIG.rotateSeconds * 1000);
   }
@@ -679,7 +780,7 @@ function startClock(){
 /* ---------------- INIT ---------------- */
 function init(){
   const dots = document.getElementById("pageDots");
-  for(let i=0;i<3;i++){
+  for(let i=0;i<4;i++){
     const d = document.createElement("div");
     d.className = "dot";
     dots.appendChild(d);
