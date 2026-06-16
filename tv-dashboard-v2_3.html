@@ -147,6 +147,12 @@
   .p2-right{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:1.4vh; min-height:0; }
   .p2-right .kpi-card .kpi-value{ font-size:3.4vw; }
 
+  /* ===== PAGE 3 LAYOUT ===== */
+  .p3-row{ display:flex; gap:1.2vw; flex:1; min-height:0; }
+  .p3-card{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .p3-card .card-title{ text-align:center; font-size:1vw; }
+  .p3-card .chart-wrap{ flex:1; min-height:0; }
+
   /* ===== FOOTER ===== */
   footer{ display:flex; align-items:center; gap:1.4vw; }
   .progress-track{ flex:1; height:0.6vh; background:var(--surface-2); border-radius:4px; overflow:hidden; }
@@ -235,6 +241,23 @@ const CONFIG = {
       { name: "อื่นๆ",             timeCol: 15, pctCol: 16, color: "#a78bfa" },
       { name: "ปรับปรุงเครื่องจักร", timeCol: 17, pctCol: 18, color: "#fb923c" }
     ]
+  },
+
+  // ---------- หน้า 3: % สาเหตุของเสีย 5 อันดับหลัก (รายเดือน) ----------
+  page3: {
+    csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=520260093",
+    dataStartRow: 2,  // แถวเดือน 1 (index)
+    maxMonths: 12,    // สแกนสูงสุด 12 เดือน
+    monthCol: 0,      // คอลัมน์ เดือน
+    checkCol: 1,      // คอลัมน์ใช้เช็คว่าเดือนนี้มีข้อมูลหรือยัง (แผ่นที่เข้าคัด > 0)
+    yAxisMax: 2,      // สเกลแกน Y สูงสุด (%)
+    causes: [
+      { name: "ขอบแหลม/ล้ม/ไม่สวย",     col: 3, color: "#3b82f6" },
+      { name: "ลอก",                   col: 4, color: "#ef4444" },
+      { name: "ขอบแตก/ข้างแตก",         col: 5, color: "#f59e0b" },
+      { name: "ไม่เต็ม",                col: 6, color: "#a78bfa" },
+      { name: "พอง หน้า-หลังถอก",       col: 7, color: "#84cc16" }
+    ]
   }
 };
 
@@ -242,7 +265,7 @@ const CONFIG = {
 
 const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-let pageRows = [null, null];
+let pageRows = [null, null, null];
 let currentPage = 0;
 let charts = {};
 
@@ -338,10 +361,12 @@ function fetchCsv(url){
 function fetchAllData(){
   return Promise.all([
     fetchCsv(CONFIG.page1.csvUrl),
-    fetchCsv(CONFIG.page2.csvUrl)
-  ]).then(([p1, p2])=>{
+    fetchCsv(CONFIG.page2.csvUrl),
+    fetchCsv(CONFIG.page3.csvUrl)
+  ]).then(([p1, p2, p3])=>{
     pageRows[0] = p1;
     pageRows[1] = p2;
+    pageRows[2] = p3;
     updateReportTitle();
     document.getElementById("updatedLabel").textContent = "UPDATED " + new Date().toLocaleTimeString("th-TH");
     renderPage(currentPage);
@@ -535,6 +560,81 @@ function renderPage2(){
   });
 }
 
+/* ---------------- PAGE 3 RENDER ---------------- */
+function renderPage3(){
+  const main = document.getElementById("main");
+  const data = pageRows[2];
+  if (!data || data.error){
+    main.innerHTML = `<div class="loading-msg">${data ? data.error : "กำลังโหลดข้อมูล..."}</div>`;
+    return;
+  }
+  const cfg = CONFIG.page3;
+
+  // หาเดือนที่มีข้อมูลแล้ว (checkCol > 0)
+  const months = [];
+  for (let i=0; i<cfg.maxMonths; i++){
+    const row = data.rows[cfg.dataStartRow + i];
+    if (!row) break;
+    const check = toNumber(row[cfg.checkCol]);
+    if (!check || check <= 0) continue;
+    months.push({ monthNum: toNumber(row[cfg.monthCol]) || (i+1), row });
+  }
+
+  if (months.length === 0){
+    main.innerHTML = `<div class="loading-msg">ไม่พบข้อมูลเดือนที่มีค่า — ตรวจสอบ config</div>`;
+    return;
+  }
+
+  main.innerHTML = `
+    <div class="page-title">% สาเหตุของเสีย 5 อันดับหลัก (รายเดือน) <span class="tag">PAGE 03 · DEFECT TRENDS</span></div>
+    <div class="p3-row">
+      ${cfg.causes.map((c,i)=>`
+        <div class="card p3-card">
+          <div class="card-title">${c.name}</div>
+          <div class="chart-wrap"><canvas id="chart3_${i}"></canvas></div>
+        </div>`).join("")}
+    </div>`;
+
+  cfg.causes.forEach((cause, i) => {
+    const values = months.map(m => toNumber(m.row[cause.col]) || 0);
+    charts[`chart3_${i}`] = new Chart(document.getElementById(`chart3_${i}`), {
+      type: "bar",
+      data: {
+        labels: months.map(m=>m.monthNum),
+        datasets: [{ data: values, backgroundColor: cause.color, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            display: true,
+            anchor: "end",
+            align: "end",
+            color: "#f4f6fb",
+            font: { family: "JetBrains Mono", size: 10, weight: "600" },
+            formatter: (v) => v.toFixed(2) + "%"
+          }
+        },
+        layout: { padding: { top: 18 } },
+        scales: {
+          x: { ticks: { color: "#7e8aa3", font:{ family:"Inter", size:11 } }, grid: { display:false } },
+          y: {
+            min: 0, max: cfg.yAxisMax,
+            ticks: {
+              color: "#7e8aa3", font:{ family:"JetBrains Mono", size:10 },
+              stepSize: 0.5, callback: (v) => v + "%"
+            },
+            grid: { color: "#1a2336" }
+          }
+        }
+      }
+    });
+  });
+}
+
 /* ---------------- ROUTER ---------------- */
 function renderPage(index){
   document.getElementById("pageDots").querySelectorAll(".dot").forEach((d,i)=>{
@@ -542,7 +642,8 @@ function renderPage(index){
   });
   Object.keys(charts).forEach(destroyChart);
   if (index === 0) renderPage1();
-  else renderPage2();
+  else if (index === 1) renderPage2();
+  else renderPage3();
 }
 
 /* ---------------- ROTATION ---------------- */
@@ -556,7 +657,7 @@ function startRotation(){
     fill.classList.add("animate");
     renderPage(currentPage);
     setTimeout(()=>{
-      currentPage = (currentPage + 1) % 2;
+      currentPage = (currentPage + 1) % 3;
       cycle();
     }, CONFIG.rotateSeconds * 1000);
   }
@@ -577,7 +678,7 @@ function startClock(){
 /* ---------------- INIT ---------------- */
 function init(){
   const dots = document.getElementById("pageDots");
-  for(let i=0;i<2;i++){
+  for(let i=0;i<3;i++){
     const d = document.createElement("div");
     d.className = "dot";
     dots.appendChild(d);
