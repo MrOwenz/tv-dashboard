@@ -262,7 +262,7 @@ const CONFIG = {
   // ---------- หน้า 4: % ของเสีย 4 สาเหตุหลัก เปรียบเทียบกะ A/B (รายเดือน) ----------
   page4: {
     csvUrl: "https://docs.google.com/spreadsheets/d/1jlH8YddxDXBQYBM2Hp8CTvqPEf_a9aBGyzJj8lSzeLU/gviz/tq?tqx=out:csv&gid=719178059",
-    dataStartRow: 36,  // แถวเดือน 1 (index) — สเปรดชีตแถว 37
+    dataStartRow: 27,  // แถวเดือน 1 (index)
     maxMonths: 12,
     yAxisMax: 2,       // สเกลแกน Y สูงสุด (%)
     causes: [
@@ -664,15 +664,11 @@ function renderPage4(){
   const cfg = CONFIG.page4;
 
   // สำหรับแต่ละสาเหตุ หาเดือนที่มีข้อมูลแล้ว (เดือนต้องเป็นเลข 1-12 และมีค่า A หรือ B อย่างน้อยหนึ่งค่า)
-  const debugRows = [];
   const causesData = cfg.causes.map(cause => {
     const months = [];
     for (let i=0; i<cfg.maxMonths; i++){
       const row = data.rows[cfg.dataStartRow + i];
       if (!row) break;
-      if (cause === cfg.causes[0]){
-        debugRows.push(`row[${cfg.dataStartRow+i}]: month(${cause.monthCol})="${row[cause.monthCol]}" A(${cause.colA})="${row[cause.colA]}" B(${cause.colB})="${row[cause.colB]}"`);
-      }
       const monthNum = toNumber(row[cause.monthCol]);
       if (!monthNum || monthNum < 1 || monthNum > 12) continue;
       const a = toNumber(row[cause.colA]);
@@ -684,12 +680,7 @@ function renderPage4(){
   });
 
   if (causesData.every(c => c.months.length === 0)){
-    main.innerHTML = `
-      <div class="page-title">เปรียบเทียบ % ของเสีย 4 สาเหตุหลัก แยกกะ (รายเดือน) <span class="tag">PAGE 04 · A VS B</span></div>
-      <div class="card" style="font-family:'JetBrains Mono',monospace; font-size:0.85vw; color:#7e8aa3; max-height:60vh; overflow:auto; flex:0 0 auto;">
-        <div class="card-title">DEBUG: rows scanned (cause #1: ${cfg.causes[0].name})</div>
-        <div>${debugRows.join("<br>")}</div>
-      </div>`;
+    main.innerHTML = `<div class="loading-msg">ไม่พบข้อมูลเดือนที่มีค่า — ตรวจสอบ config</div>`;
     return;
   }
 
