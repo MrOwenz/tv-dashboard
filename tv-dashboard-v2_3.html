@@ -48,41 +48,45 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    border-bottom:1px solid var(--border);
-    padding-bottom:1.6vh;
+    background:#f97316;
+    border-radius:14px;
+    padding:1.6vh 1.8vw;
+    margin:-0.4vh 0 0.4vh 0;
   }
   .brand{ display:flex; flex-direction:column; gap:0.4vh; }
-  .brand .eyebrow{
+  header .eyebrow{
     font-family:'JetBrains Mono', monospace;
     font-size:1.15vw;
     letter-spacing:0.2em;
-    color:var(--teal);
+    color:#15803d;
+    font-weight:700;
     display:flex; align-items:center; gap:0.7vw;
   }
   .pulse{
     width:0.8vw; height:0.8vw; border-radius:50%;
-    background:var(--teal);
+    background:#15803d;
     animation:pulse 2s infinite;
   }
   @keyframes pulse{
-    0%{ box-shadow:0 0 0 0 rgba(45,212,191,0.55); }
-    70%{ box-shadow:0 0 0 1vw rgba(45,212,191,0); }
-    100%{ box-shadow:0 0 0 0 rgba(45,212,191,0); }
+    0%{ box-shadow:0 0 0 0 rgba(21,128,61,0.5); }
+    70%{ box-shadow:0 0 0 1vw rgba(21,128,61,0); }
+    100%{ box-shadow:0 0 0 0 rgba(21,128,61,0); }
   }
-  .brand h1{
+  header h1{
     font-family:'Space Grotesk', sans-serif;
     font-weight:700; font-size:2.6vw; letter-spacing:-0.01em;
+    color:#0a0e1a;
   }
-  .brand h1 .subtitle{
-    font-family:'Inter', sans-serif; font-weight:500;
-    font-size:1.3vw; color:var(--text-muted); margin-left:1vw;
+  header h1 .subtitle{
+    font-family:'Inter', sans-serif; font-weight:600;
+    font-size:1.3vw; color:#3a2511; margin-left:1vw;
   }
   .clock-block{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.6vh; }
-  .clock{ font-family:'JetBrains Mono', monospace; font-size:2.6vw; font-weight:700; line-height:1; }
-  .date{ font-size:1.05vw; color:var(--text-muted); font-weight:500; }
+  header .clock{ font-family:'JetBrains Mono', monospace; font-size:2.6vw; font-weight:700; line-height:1; color:#0a0e1a; }
+  header .date{ font-size:1.05vw; color:#3a2511; font-weight:600; }
   .page-dots{ display:flex; gap:0.5vw; margin-top:0.4vh; }
-  .page-dots .dot{ width:2.2vw; height:0.35vh; background:var(--border); border-radius:2px; transition:background 0.3s; }
-  .page-dots .dot.active{ background:var(--teal); }
+  .page-dots .dot{ width:2.2vw; height:0.35vh; background:rgba(10,14,26,0.25); border-radius:2px; transition:background 0.3s; }
+  .page-dots .dot.active{ background:#0a0e1a; }
 
   /* ===== MAIN ===== */
   main{ flex:1; display:flex; flex-direction:column; gap:1.8vh; min-height:0; }
@@ -197,7 +201,7 @@
    ========================================================================= */
 
 const CONFIG = {
-  rotateSeconds: 10,
+  rotateSeconds: 15,
   refreshDataSeconds: 60,
 
   // ---------- หน้า 1: การผลิตและคุณภาพ ----------
